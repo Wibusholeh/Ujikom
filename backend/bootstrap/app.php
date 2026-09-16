@@ -1,0 +1,50 @@
+<?php
+
+use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Configuration\Exceptions;
+use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Illuminate\Auth\AuthenticationException;
+
+use App\Http\Middleware\CheckRole;
+use App\Http\Middleware\IsAdmin;
+use App\Http\Middleware\IsPetugas;
+use App\Http\Middleware\IsPeminjam;
+
+return Application::configure(basePath: dirname(__DIR__))
+    ->withRouting(
+        web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
+        commands: __DIR__.'/../routes/console.php',
+        health: '/up',
+    )
+    ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->alias([
+            'role' => CheckRole::class,
+
+            'role.admin'    => IsAdmin::class,
+            'role.petugas'  => IsPetugas::class,
+            'role.peminjam' => IsPeminjam::class,
+        ]);
+    })
+    ->withExceptions(function (Exceptions $exceptions): void {
+        // Paksa error Authentication (belum login / token salah) di jalur API menjadi JSON
+        $exceptions->render(function (AuthenticationException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'message' => 'Unauthorized. Token tidak valid atau belum disertakan.'
+                ], 401);
+            }
+        });
+
+        // Paksa error Authorization (salah role / dilarang masuk) di jalur API menjadi JSON
+        $exceptions->render(function (AccessDeniedHttpException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'message' => 'Forbidden. Anda tidak memiliki hak akses untuk fitur ini.'
+                ], 403);
+            }
+        });
+    })
+    ->create();
