@@ -56,8 +56,14 @@
                     </a>
 
                     <!-- Menu Kelola Pengembalian -->
+                                        <!-- Menu Kelola Pengembalian -->
                     <a href="{{ route('admin.pengembalian.index') }}" class="block px-4 py-2 rounded-lg transition {{ request()->routeIs('admin.pengembalian*') ? 'bg-gray-800 text-white font-medium shadow' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
                         Kelola Pengembalian
+                    </a>
+
+                    <!-- Menu Log Aktivitas -->
+                    <a href="{{ route('admin.log-aktivitas.index') }}" class="block px-4 py-2 rounded-lg transition {{ request()->routeIs('admin.log-aktivitas*') ? 'bg-gray-800 text-white font-medium shadow' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                        Log Aktivitas
                     </a>
                 @endif
 
@@ -77,8 +83,25 @@
                 @endif
 
             </nav>
-            <div class="p-4 border-t border-gray-800 text-sm text-gray-400">
-                Logged in as: <span class="text-white font-semibold">{{ auth()->user()->name ?? 'User' }}</span>
+                        @php
+                $sidebarUser = auth()->user();
+                $fotoPath = $sidebarUser?->foto;
+                $punyaFoto = $fotoPath && file_exists(public_path($fotoPath));
+            @endphp
+            <div class="p-4 border-t border-gray-800 text-sm text-gray-400 flex items-center gap-3">
+                @if($punyaFoto)
+                    <img src="{{ asset(implode('/', array_map('rawurlencode', explode('/', $fotoPath)))) }}"
+                         alt="Foto {{ $sidebarUser->name }}"
+                         class="h-10 w-10 rounded-full object-cover border border-gray-700">
+                @else
+                    <div class="h-10 w-10 rounded-full bg-gray-700 text-white flex items-center justify-center font-semibold">
+                        {{ strtoupper(substr($sidebarUser->name ?? 'U', 0, 1)) }}
+                    </div>
+                @endif
+                <div>
+                    <div>Logged in as:</div>
+                    <span class="text-white font-semibold">{{ $sidebarUser->name ?? 'User' }}</span>
+                </div>
             </div>
         </aside>
 

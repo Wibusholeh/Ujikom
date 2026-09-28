@@ -39,25 +39,27 @@
                 </thead>
 
                 <tbody class="text-gray-700 text-sm">
-                    @forelse($logs as $log)
-                        <tr class="hover:bg-gray-50 transition">
-                            <td class="py-3 px-4 border-b">
-                                {{ $log->created_at }}
-                            </td>
-                            <td class="py-3 px-4 border-b font-medium text-gray-900">
-                                {{ $log->user->name ?? 'Sistem' }}
-                            </td>
-                            <td class="py-3 px-4 border-b">
-                                {{ $log->aktivitas }}
-                            </td>
-                        </tr>
-                    @empty
+                    @if(isset($logs) && count($logs) > 0)
+                        @foreach($logs as $log)
+                            <tr class="hover:bg-gray-50 transition">
+                                <td class="py-3 px-4 border-b">
+                                    {{ $log->created_at }}
+                                </td>
+                                <td class="py-3 px-4 border-b font-medium text-gray-900">
+                                    {{ optional($log->user)->name ?? 'Sistem' }}
+                                </td>
+                                <td class="py-3 px-4 border-b">
+                                    {{ $log->aktivitas }}
+                                </td>
+                            </tr>
+                        @endforeach
+                    @else
                         <tr>
                             <td colspan="3" class="py-4 text-center text-gray-500">
                                 Belum ada log aktivitas.
                             </td>
                         </tr>
-                    @endforelse
+                    @endif
                 </tbody>
             </table>
         </div>

@@ -86,16 +86,19 @@
                             </td>
                             <td class="py-3 px-4 border-b">
                                 <div class="flex flex-col space-y-2">
-                                    <!-- Form Ubah Status Cepat -->
+                                    <!-- Form Ubah Status Cepat dengan Tombol Simpan -->
                                     <form action="{{ route('admin.peminjaman.updateStatus', $peminjaman->id) }}" method="POST" class="flex items-center space-x-1">
                                         @csrf
                                         @method('PUT')
-                                        <select name="status" onchange="this.form.submit()" class="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none">
+                                        <select name="status" class="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none">
                                             <option value="diajukan" {{ $peminjaman->status == 'diajukan' ? 'selected' : '' }}>Diajukan</option>
                                             <option value="dipinjam" {{ $peminjaman->status == 'dipinjam' ? 'selected' : '' }}>Dipinjam</option>
                                             <option value="selesai" {{ $peminjaman->status == 'selesai' ? 'selected' : '' }}>Selesai</option>
                                             <option value="telat" {{ $peminjaman->status == 'telat' ? 'selected' : '' }}>Telat</option>
                                         </select>
+                                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs font-semibold transition">
+                                            Simpan
+                                        </button>
                                     </form>
 
                                     <!-- Tombol Hapus -->

@@ -60,11 +60,12 @@
 
                     <div class="mb-3">
                         <label class="form-label">
-                            Rencana Tanggal Kembali
+                            Rencana Tanggal & Jam Kembali
                         </label>
 
+                        <!-- Diubah dari type="date" menjadi type="datetime-local" -->
                         <input
-                            type="date"
+                            type="datetime-local"
                             name="tgl_kembali_plan"
                             class="form-control"
                             required

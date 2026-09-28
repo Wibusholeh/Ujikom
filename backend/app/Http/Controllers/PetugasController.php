@@ -10,6 +10,12 @@ use Illuminate\Support\Facades\DB;
 
 class PetugasController extends Controller
 {
+    // Alias method 'index' yang memanggil logika 'indexPeminjaman' agar route sesuai
+    public function index(Request $request)
+    {
+        return $this->indexPeminjaman($request);
+    }
+
     // Menampilkan daftar pengajuan peminjaman dari siswa/peminjam
     public function indexPeminjaman(Request $request)
     {
@@ -23,7 +29,7 @@ class PetugasController extends Controller
                 });
             })
             ->latest()
-            ->get();
+            ->paginate(10);
 
         return view('petugas.peminjaman.index', compact('peminjamans', 'search'));
     }
@@ -67,5 +73,69 @@ class PetugasController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
+    }
+
+    public function pemantauanPengembalian(Request $request)
+    {
+        $keyword = $request->input('search');
+
+        $peminjamans = Peminjaman::with(['user', 'detailPinjams.alat'])
+            ->where('status', 'dipinjam') // Hanya tampilkan yang sedang dipinjam
+            ->when($keyword, function ($query) use ($keyword) {
+                $query->whereHas('user', function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%{$keyword}%");
+                });
+            })
+            ->orderBy('tgl_kembali_plan', 'asc')
+            ->paginate(10);
+
+        return view('petugas.peminjaman.pemantauan', compact('peminjamans'));
+    }
+
+    public function pengembalianIndex()
+    {
+        return view('petugas.pengembalian.index');
+    }
+
+    /**
+     * Halaman Laporan Pengembalian untuk Petugas
+     */
+    public function laporanPengembalian(Request $request)
+    {
+        $dariTanggal = $request->input('dari_tanggal');
+        $sampaiTanggal = $request->input('sampai_tanggal');
+
+        $query = Pengembalian::with(['peminjaman.user', 'petugas']);
+
+        if ($dariTanggal && $sampaiTanggal) {
+            $query->whereBetween('tgl_kembali', [$dariTanggal, $sampaiTanggal]);
+        }
+
+        $pengembalian = $query->get();
+        $totalDenda = $pengembalian->sum('denda');
+
+        // Diubah agar mengarah ke folder peminjaman/laporan sesuai struktur Anda
+        return view('petugas.peminjaman.laporan.pengembalian', compact('pengembalian', 'dariTanggal', 'sampaiTanggal', 'totalDenda'));
+    }
+
+    /**
+     * Halaman Cetak Laporan Pengembalian
+     */
+    public function cetakLaporanPengembalian(Request $request)
+    {
+        $dariTanggal = $request->input('dari_tanggal');
+        $sampaiTanggal = $request->input('sampai_tanggal');
+
+        $query = Pengembalian::with(['peminjaman.user', 'petugas']);
+
+        if ($dariTanggal && $sampaiTanggal) {
+            $query->whereBetween('tgl_kembali', [$dariTanggal, $sampaiTanggal]);
+        }
+
+        $pengembalian = $query->get();
+        $totalDenda = $pengembalian->sum('denda');
+
+        // Diubah agar mengarah ke folder peminjaman/laporan sesuai struktur Anda
+        return view('petugas.peminjaman.laporan.pengembalian_cetak', compact('pengembalian', 'dariTanggal', 'sampaiTanggal', 'totalDenda'));
     }
 }
