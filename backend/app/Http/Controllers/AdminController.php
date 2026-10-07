@@ -102,13 +102,15 @@ class AdminController extends Controller
 
     public function storeAlat(Request $request)
     {
-        $request->validate([
+               $request->validate([
             'nama_alat' => 'required|string|max:255',
             'kategori_id' => 'required|exists:kategori,id',
-            'stok' => 'required|integer|min:0',
+            'stok' => 'required|integer|min:1',
             'status_kondisi' => 'required|string|max:100',
             'deskripsi' => 'nullable|string',
             'gambar' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+        ], [
+            'stok.min' => 'Stok alat minimal harus 1, tidak boleh 0.',
         ]);
 
         $data = $request->all();
@@ -198,7 +200,7 @@ class AdminController extends Controller
     {
         $search = $request->input('search');
 
-        $users = User::when($search, function ($query, $search) {
+                $users = User::when($search, function ($query, $search) {
             $query->where(function ($query) use ($search) {
                 $query->where('name', 'like', '%' . $search . '%')
                     ->orWhere('email', 'like', '%' . $search . '%')
@@ -206,7 +208,7 @@ class AdminController extends Controller
                     ->orWhere('no_hp', 'like', '%' . $search . '%');
             });
         })
-            ->orderByRaw("role = 'admin' DESC")
+            ->orderByRaw("FIELD(role, 'admin', 'petugas', 'peminjam')")
             ->orderBy('name')
             ->get();
 
