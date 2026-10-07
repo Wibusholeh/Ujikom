@@ -1,68 +1,103 @@
 @extends('layouts.app')
 
-@section('content')
-<div style="padding: 20px;">
-    <h2 style="margin-bottom: 20px;">Pemantauan Pengembalian</h2>
-    
-    <div style="background: #ffffff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-        <h4 style="margin-bottom: 15px; font-size: 18px; font-weight: bold;">Daftar Alat Sedang Dipinjam</h4>
-        
-        <!-- Form Pencarian -->
-        <form method="GET" action="{{ route('petugas.pemantauan') }}" style="margin-bottom: 20px; display: flex; gap: 10px; max-width: 400px;">
-            <input type="text" name="search" class="form-control" placeholder="Cari nama peminjam..." value="{{ request('search') }}" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; flex: 1;">
-            <button type="submit" style="padding: 8px 16px; background: #212529; color: #fff; border: none; border-radius: 4px; cursor: pointer;">Cari</button>
-        </form>
+@section('title', 'Pemantauan Pengembalian - Panel Petugas')
 
-        <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; text-align: left;">
-                <thead>
-                    <tr style="background-color: #f8f9fa; border-bottom: 2px solid #dee2e6;">
-                        <th style="padding: 12px; border: 1px solid #dee2e6;">PEMINJAM</th>
-                        <th style="padding: 12px; border: 1px solid #dee2e6;">TANGGAL PINJAM / RENCANA KEMBALI</th>
-                        <th style="padding: 12px; border: 1px solid #dee2e6;">DETAIL ALAT DIPINJAM</th>
-                        <th style="padding: 12px; border: 1px solid #dee2e6;">STATUS WAKTU</th>
-                        <th style="padding: 12px; border: 1px solid #dee2e6;">AKSI</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($peminjamans as $peminjaman)
-                    <tr style="border-bottom: 1px solid #dee2e6;">
-                        <td style="padding: 12px; border: 1px solid #dee2e6; vertical-align: top;">{{ $peminjaman->user->name ?? '-' }}</td>
-                        <td style="padding: 12px; border: 1px solid #dee2e6; vertical-align: top;">
-                            <span style="color: #6c757d; font-size: 12px;">Pinjam:</span> {{ $peminjaman->tgl_pinjam ?? '-' }}<br>
-                            <span style="color: #6c757d; font-size: 12px;">Rencana:</span> {{ $peminjaman->tgl_kembali_plan ?? '-' }}
+@section('header-title', 'Pemantauan Pengembalian')
+
+@section('content')
+
+@if(session('success'))
+    <div class="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-lg shadow-sm text-sm">
+        {{ session('success') }}
+    </div>
+@endif
+
+@if(session('error'))
+    <div class="mb-4 bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg shadow-sm text-sm">
+        {{ session('error') }}
+    </div>
+@endif
+
+<div class="bg-white shadow-md rounded-lg overflow-hidden p-6">
+    <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+        <h2 class="text-lg font-semibold text-gray-800">Daftar Alat Sedang Dipinjam</h2>
+
+        <form action="{{ route('petugas.pemantauan') }}" method="GET" class="flex w-full md:w-auto">
+            <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama peminjam..." class="border border-gray-300 rounded-l-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 w-full md:w-64">
+            <button type="submit" class="bg-gray-900 hover:bg-gray-800 text-white px-4 py-1.5 rounded-r-md text-sm transition">Cari</button>
+        </form>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peminjam</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal Pinjam / Rencana Kembali</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Detail Alat Dipinjam</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status Waktu</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                @forelse($peminjamans as $item)
+                    @php $telat = \Carbon\Carbon::parse($item->tgl_kembali_plan)->isPast(); @endphp
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {{ optional($item->user)->name ?? '-' }}
                         </td>
-                        <td style="padding: 12px; border: 1px solid #dee2e6; vertical-align: top;">
-                            <ul style="margin: 0; padding-left: 15px;">
-                                @foreach($peminjaman->detailPinjams as $detail)
-                                    <li>{{ $detail->alat->nama_alat ?? 'Alat tidak ditemukan' }} (Jumlah: {{ $detail->jumlah }})</li>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            <div>Pinjam: <span class="text-gray-500">{{ $item->tgl_pinjam }}</span></div>
+                            <div>Rencana: <span class="text-gray-500">{{ $item->tgl_kembali_plan }}</span></div>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-700">
+                            <ul class="list-disc list-inside">
+                                @foreach($item->detailPinjams as $detail)
+                                    <li>{{ optional($detail->alat)->nama_alat ?? '-' }} <span class="text-xs text-gray-500">(Jumlah: {{ $detail->jumlah }})</span></li>
                                 @endforeach
                             </ul>
                         </td>
-                        <td style="padding: 12px; border: 1px solid #dee2e6; vertical-align: top;">
-                            @if(now()->greaterThan($peminjaman->tgl_kembali_plan))
-                                <span style="background: #dc3545; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Terlambat / Lewat Waktu</span>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            @if($telat)
+                                <span class="px-2 py-1 rounded-full bg-red-100 text-red-800 text-xs font-semibold">Terlambat / Lewat Waktu</span>
                             @else
-                                <span style="background: #ffc107; color: #000; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Tepat Waktu / Berjalan</span>
+                                <span class="px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs font-semibold">Tepat Waktu</span>
                             @endif
                         </td>
-                        <td style="padding: 12px; border: 1px solid #dee2e6; vertical-align: top;">
-                            <a href="#" style="background: #198754; color: #fff; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 14px; display: inline-block;">Proses Pengembalian</a>
+                                                <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                            <div class="flex justify-center gap-2">
+                                <form action="{{ route('petugas.pengembalian', $item->id) }}" method="POST"
+                                      onsubmit="return confirm('Setujui pengembalian alat dari {{ optional($item->user)->name }}?')">
+                                    @csrf
+                                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded text-xs font-semibold transition">
+                                        Setujui
+                                    </button>
+                                </form>
+
+                                <form action="{{ route('petugas.pengembalian.tolak', $item->id) }}" method="POST"
+                                      onsubmit="const c = prompt('Catatan untuk peminjam (boleh dikosongkan):'); if (c === null) return false; this.querySelector('[name=catatan]').value = c; return true;">
+                                    @csrf
+                                    <input type="hidden" name="catatan" value="">
+                                    <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs font-semibold transition">
+                                        Tolak
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
-                    @empty
+                @empty
                     <tr>
-                        <td colspan="5" style="padding: 20px; text-align: center; border: 1px solid #dee2e6;">Tidak ada data peminjaman yang aktif.</td>
+                        <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada alat yang sedang dipinjam saat ini.</td>
                     </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
 
-        <!-- Paginasi -->
-        <div style="margin-top: 20px;">
-            {{ $peminjamans->withQueryString()->links() }}
-        </div>
+    <div class="mt-4">
+        @if(method_exists($peminjamans, 'links'))
+            {{ $peminjamans->links() }}
+        @endif
     </div>
 </div>
 @endsection

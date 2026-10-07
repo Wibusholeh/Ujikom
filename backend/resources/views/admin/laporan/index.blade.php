@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Laporan Pengembalian - Petugas')
+@section('title', 'Laporan Pengembalian')
 
 @section('header-title', 'Laporan Pengembalian Alat')
 
@@ -10,7 +10,7 @@
         <h2 class="text-lg font-semibold text-gray-800">Filter Laporan</h2>
     </div>
 
-    <form action="{{ route('petugas.laporan.pengembalian') }}" method="GET" class="flex flex-wrap items-end gap-3 mb-6">
+    <form action="{{ route('admin.laporan.index') }}" method="GET" class="flex flex-wrap items-end gap-3 mb-6">
         <div>
             <label class="block text-xs font-medium text-gray-600 mb-1">Dari Tanggal</label>
             <input type="date" name="dari_tanggal" value="{{ $dariTanggal }}" class="border border-gray-300 rounded-md px-3 py-1.5 text-sm">
@@ -19,10 +19,14 @@
             <label class="block text-xs font-medium text-gray-600 mb-1">Sampai Tanggal</label>
             <input type="date" name="sampai_tanggal" value="{{ $sampaiTanggal }}" class="border border-gray-300 rounded-md px-3 py-1.5 text-sm">
         </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Cari Peminjam</label>
+            <input type="text" name="search" value="{{ $search }}" placeholder="Nama peminjam..." class="border border-gray-300 rounded-md px-3 py-1.5 text-sm">
+        </div>
         <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-md text-sm transition">
             Tampilkan
         </button>
-        <a href="{{ route('petugas.laporan.pengembalian.cetak', request()->only('dari_tanggal', 'sampai_tanggal')) }}"
+        <a href="{{ route('admin.laporan.cetak', request()->only('dari_tanggal', 'sampai_tanggal')) }}"
            target="_blank"
            class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-1.5 rounded-md text-sm transition">
             Cetak Laporan
@@ -46,16 +50,17 @@
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-                @forelse($pengembalian as $item)
+                @forelse($peminjamans as $item)
+                    @php $denda = optional($item->pengembalian)->denda ?? 0; @endphp
                     <tr>
                         <td class="px-6 py-4 text-sm text-gray-500">{{ $loop->iteration }}</td>
-                        <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ optional(optional($item->peminjaman)->user)->name ?? '-' }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-500">{{ optional($item->peminjaman)->tgl_kembali_plan ?? '-' }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-500">{{ $item->tgl_kembali ?? '-' }}</td>
+                        <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ optional($item->user)->name ?? '-' }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-500">{{ $item->tgl_kembali_plan }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-500">{{ optional($item->pengembalian)->tgl_kembali ?? '-' }}</td>
                         <td class="px-6 py-4 text-sm">
-                            @if($item->denda > 0)
+                            @if($denda > 0)
                                 <span class="px-2 py-1 rounded-full bg-red-100 text-red-800 text-xs font-semibold">
-                                    Rp {{ number_format($item->denda, 0, ',', '.') }}
+                                    Rp {{ number_format($denda, 0, ',', '.') }}
                                 </span>
                             @else
                                 <span class="px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs font-semibold">Tepat waktu</span>

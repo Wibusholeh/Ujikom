@@ -6,6 +6,7 @@ use App\Models\Peminjaman;
 use App\Models\Pengembalian;
 use App\Models\Alat;
 use Illuminate\Http\Request;
+use App\Models\LogAktivitas;
 use Illuminate\Support\Facades\DB;
 
 class PetugasController extends Controller
@@ -39,18 +40,48 @@ class PetugasController extends Controller
     {
         DB::beginTransaction();
         try {
-            $peminjaman = Peminjaman::with('detailPinjams')->findOrFail($id);
-            $peminjaman->update(['status' => 'dipinjam']);
+            $peminjaman = Peminjaman::with('detailPinjams.alat')->findOrFail($id);
 
-            // Kurangi stok alat secara otomatis
+            $alatDicoret = [];
+
             foreach ($peminjaman->detailPinjams as $detail) {
-                $alat = Alat::findOrFail($detail->alat_id);
+                $alat = Alat::find($detail->alat_id);
+
+                if (!$alat || $alat->stok < $detail->jumlah) {
+                    // Stok tidak cukup: coret alat ini saja dari pengajuan
+                    $alatDicoret[] = $alat->nama_alat ?? 'Alat tidak ditemukan';
+                    $detail->delete();
+                    continue;
+                }
+
                 $alat->stok -= $detail->jumlah;
                 $alat->save();
             }
 
+            // Cek apakah masih ada alat yang berhasil diproses
+            $sisaDetail = $peminjaman->detailPinjams()->count();
+
+            if ($sisaDetail === 0) {
+                DB::rollBack();
+                return redirect()->back()->with('error', 'Semua alat pada pengajuan ini sudah habis stoknya. Pengajuan tidak bisa disetujui.');
+            }
+
+            $peminjaman->update(['status' => 'dipinjam']);
+
+            LogAktivitas::create([
+                'user_id' => auth()->id(),
+                'aktivitas' => 'Menyetujui peminjaman #' . $peminjaman->id . ' (' . optional($peminjaman->user)->name . ')'
+                    . (count($alatDicoret) ? ', alat dicoret karena stok habis: ' . implode(', ', $alatDicoret) : ''),
+            ]);
+
             DB::commit();
-            return redirect()->back()->with('success', 'Peminjaman disetujui dan stok alat dikurangi.');
+
+            $pesan = 'Peminjaman disetujui dan stok alat dikurangi.';
+            if (count($alatDicoret) > 0) {
+                $pesan .= ' Catatan: alat berikut dicoret karena stok habis: ' . implode(', ', $alatDicoret) . '.';
+            }
+
+            return redirect()->back()->with('success', $pesan);
         } catch (\Exception $e) {
             DB::rollback();
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
@@ -79,8 +110,8 @@ class PetugasController extends Controller
     {
         $keyword = $request->input('search');
 
-        $peminjamans = Peminjaman::with(['user', 'detailPinjams.alat'])
-            ->where('status', 'dipinjam') // Hanya tampilkan yang sedang dipinjam
+                $peminjamans = Peminjaman::with(['user', 'detailPinjams.alat'])
+            ->whereIn('status', ['dipinjam', 'pengajuan_pengembalian'])
             ->when($keyword, function ($query) use ($keyword) {
                 $query->whereHas('user', function ($q) use ($keyword) {
                     $q->where('name', 'like', "%{$keyword}%");
@@ -114,7 +145,6 @@ class PetugasController extends Controller
         $pengembalian = $query->get();
         $totalDenda = $pengembalian->sum('denda');
 
-        // Diubah agar mengarah ke folder peminjaman/laporan sesuai struktur Anda
         return view('petugas.peminjaman.laporan.pengembalian', compact('pengembalian', 'dariTanggal', 'sampaiTanggal', 'totalDenda'));
     }
 
@@ -135,7 +165,34 @@ class PetugasController extends Controller
         $pengembalian = $query->get();
         $totalDenda = $pengembalian->sum('denda');
 
-        // Diubah agar mengarah ke folder peminjaman/laporan sesuai struktur Anda
         return view('petugas.peminjaman.laporan.pengembalian_cetak', compact('pengembalian', 'dariTanggal', 'sampaiTanggal', 'totalDenda'));
+    }
+
+    public function prosesPengembalian(Request $request, $id)
+    {
+        $peminjaman = Peminjaman::findOrFail($id);
+        
+        $peminjaman->status = 'selesai'; 
+        $peminjaman->save();
+
+        return redirect()->back()->with('success', 'Pengembalian disetujui dan status telah selesai.');
+    }
+
+        public function tolakPengembalian(Request $request, $id)
+    {
+        $peminjaman = Peminjaman::findOrFail($id);
+
+        $catatan = $request->input('catatan') ?: 'Pengembalian tidak disetujui oleh petugas.';
+
+        $peminjaman->status = 'dipinjam';
+        $peminjaman->catatan_petugas = $catatan;
+        $peminjaman->save();
+
+        LogAktivitas::create([
+            'user_id' => auth()->id(),
+            'aktivitas' => 'Menolak pengembalian peminjaman #' . $peminjaman->id . ': ' . $catatan,
+        ]);
+
+        return redirect()->back()->with('success', 'Pengembalian ditolak, peminjam akan melihat catatan ini.');
     }
 }

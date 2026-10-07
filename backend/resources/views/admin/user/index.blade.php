@@ -173,33 +173,49 @@
                                 {{ $user->no_hp ?? '-' }}
                             </td>
 
-                            <td class="py-3 px-4 border-b">
+                                                        <td class="py-3 px-4 border-b">
+
+                                @php
+                                    $isSelf = $user->id === auth()->id();
+                                    $bolehEdit = !$user->is_super_admin || $isSelf;
+                                    $bolehHapus = !$isSelf && !$user->is_super_admin;
+                                @endphp
 
                                 <div class="flex items-center space-x-2">
 
+                                    @if($user->is_super_admin)
+                                        <span class="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                            👑 Admin Utama
+                                        </span>
+                                    @endif
+
                                     {{-- Edit --}}
-                                    <a
-                                        href="{{ route('admin.user.edit', $user->id) }}"
-                                        class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded text-xs font-semibold transition">
-                                        Edit
-                                    </a>
+                                    @if($bolehEdit)
+                                        <a
+                                            href="{{ route('admin.user.edit', $user->id) }}"
+                                            class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded text-xs font-semibold transition">
+                                            Edit
+                                        </a>
+                                    @endif
 
                                     {{-- Hapus --}}
-                                    <form
-                                        action="{{ route('admin.user.destroy', $user->id) }}"
-                                        method="POST"
-                                        onsubmit="return confirm('Yakin ingin menghapus user ini?')">
+                                    @if($bolehHapus)
+                                        <form
+                                            action="{{ route('admin.user.destroy', $user->id) }}"
+                                            method="POST"
+                                            onsubmit="return confirm('Yakin ingin menghapus user ini?')">
 
-                                        @csrf
-                                        @method('DELETE')
+                                            @csrf
+                                            @method('DELETE')
 
-                                        <button
-                                            type="submit"
-                                            class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs font-semibold transition">
-                                            Hapus
-                                        </button>
+                                            <button
+                                                type="submit"
+                                                class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs font-semibold transition">
+                                                Hapus
+                                            </button>
 
-                                    </form>
+                                        </form>
+                                    @endif
 
                                 </div>
 

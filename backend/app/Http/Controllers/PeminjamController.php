@@ -33,10 +33,10 @@ class PeminjamController extends Controller
         try {
             // Buat header peminjaman
             $peminjaman = Peminjaman::create([
-                'user_id'           => auth()->id(),
-                'tgl_pinjam'        => now(),
-                'tgl_kembali_plan'  => $request->tgl_kembali_plan,
-                'status'            => 'diajukan',
+                'user_id'          => auth()->id(),
+                'tgl_pinjam'       => now(),
+                'tgl_kembali_plan' => $request->tgl_kembali_plan,
+                'status'           => 'diajukan',
             ]);
 
             // Masukkan daftar alat yang dipinjam ke detail_pinjam
@@ -67,9 +67,24 @@ class PeminjamController extends Controller
     {
         $peminjamans = Peminjaman::with('detailPinjams.alat')
             ->where('user_id', auth()->id())
+            ->whereNotIn('status', ['selesai', 'dikembalikan', 'ditolak'])
             ->latest()
             ->get();
 
         return view('peminjam.riwayat', compact('peminjamans'));
+    }
+
+    public function ajukanPengembalian($id)
+    {
+        $peminjaman = Peminjaman::where('id', $id)
+                        ->where('user_id', auth()->id())
+                        ->where('status', 'dipinjam')
+                        ->firstOrFail();
+
+        $peminjaman->status = 'pengajuan_pengembalian';
+        $peminjaman->catatan_petugas = null; // bersihkan catatan penolakan lama kalau ada
+        $peminjaman->save();
+
+        return redirect()->back()->with('success', 'Pengajuan pengembalian alat berhasil dikirim ke petugas.');
     }
 }

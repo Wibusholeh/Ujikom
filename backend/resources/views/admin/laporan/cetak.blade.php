@@ -13,7 +13,9 @@
             padding: 32px 40px;
             background: #fff;
         }
-        .no-print { margin-bottom: 20px; }
+        .no-print {
+            margin-bottom: 20px;
+        }
         .no-print button {
             background: #4f46e5;
             color: #fff;
@@ -141,20 +143,21 @@
             </tr>
         </thead>
         <tbody>
-            @forelse($pengembalian as $item)
+            @forelse($peminjamans as $item)
+                @php $denda = optional($item->pengembalian)->denda ?? 0; @endphp
                 <tr>
                     <td>{{ $loop->iteration }}</td>
-                    <td>{{ optional(optional($item->peminjaman)->user)->name ?? '-' }}</td>
-                    <td>{{ optional($item->peminjaman)->tgl_kembali_plan ?? '-' }}</td>
-                    <td class="{{ $item->tgl_kembali ? '' : 'muted' }}">
-                        {{ $item->tgl_kembali ?? '-' }}
+                    <td>{{ optional($item->user)->name ?? '-' }}</td>
+                    <td>{{ $item->tgl_kembali_plan }}</td>
+                    <td class="{{ optional($item->pengembalian)->tgl_kembali ? '' : 'muted' }}">
+                        {{ optional($item->pengembalian)->tgl_kembali ?? '-' }}
                     </td>
-                    <td class="{{ optional($item->petugas)->name ? '' : 'muted' }}">
-                        {{ optional($item->petugas)->name ?? '-' }}
+                    <td class="{{ optional(optional($item->pengembalian)->petugas)->name ? '' : 'muted' }}">
+                        {{ optional(optional($item->pengembalian)->petugas)->name ?? '-' }}
                     </td>
                     <td class="text-right">
-                        @if($item->denda > 0)
-                            <span class="badge badge-denda">Rp {{ number_format($item->denda, 0, ',', '.') }}</span>
+                        @if($denda > 0)
+                            <span class="badge badge-denda">Rp {{ number_format($denda, 0, ',', '.') }}</span>
                         @else
                             <span class="badge badge-tepat">Tepat waktu</span>
                         @endif

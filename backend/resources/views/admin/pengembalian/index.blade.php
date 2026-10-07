@@ -38,6 +38,7 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tgl Dikembalikan</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Denda</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -64,7 +65,7 @@
                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Selesai</span>
                             @endif
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                         <td class="px-6 py-4 whitespace-nowrap text-sm">
                             @if($denda > 0)
                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
                                     Rp {{ number_format($denda, 0, ',', '.') }}
@@ -73,11 +74,21 @@
                                 <span class="text-gray-500">-</span>
                             @endif
                         </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm">
+                            <form action="{{ route('admin.pengembalian.destroy', $item->id) }}" method="POST"
+                                  onsubmit="return confirm('Hapus riwayat pengembalian {{ optional($item->user)->name }}? Data ini tidak bisa dikembalikan.')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs transition">
+                                    Hapus
+                                </button>
+                            </form>
+                        </td>
                     </tr>
                     @endforeach
                 @else
                     <tr>
-                        <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada data pengembalian.</td>
+                        <td colspan="8" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada data pengembalian.</td>
                     </tr>
                 @endif
             </tbody>

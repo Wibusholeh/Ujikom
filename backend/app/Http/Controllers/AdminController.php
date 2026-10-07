@@ -15,16 +15,46 @@ use Illuminate\Support\Facades\DB;
 class AdminController extends Controller
 {
     // Menampilkan Dashboard Admin & Log Aktivitas
-    public function index()
+    
+        public function index()
     {
         $logs = LogAktivitas::with('user')
             ->latest()
             ->take(5)
             ->get();
 
-        return view('admin.dashboard', compact('logs'));
-    }
+        $stats = [
+            'total_alat'          => Alat::count(),
+            'total_kategori'      => Kategori::count(),
+            'total_user'          => User::count(),
+            'peminjaman_aktif'    => Peminjaman::where('status', 'dipinjam')->count(),
+            'menunggu_persetujuan'=> Peminjaman::where('status', 'diajukan')->count(),
+            'denda_bulan_ini'     => \App\Models\Pengembalian::whereMonth('tgl_kembali', now()->month)
+                                        ->whereYear('tgl_kembali', now()->year)
+                                        ->sum('denda'),
+        ];
 
+        // Tren pengajuan peminjaman 7 hari terakhir, untuk grafik
+        $tren = collect();
+        for ($i = 6; $i >= 0; $i--) {
+            $tanggal = now()->subDays($i);
+            $tren->push([
+                'label'  => $tanggal->translatedFormat('d M'),
+                'jumlah' => Peminjaman::whereDate('created_at', $tanggal->toDateString())->count(),
+            ]);
+        }
+
+        // 5 alat paling sering dipinjam
+        $alatTerpopuler = DetailPinjam::selectRaw('alat_id, SUM(jumlah) as total')
+            ->with('alat')
+            ->groupBy('alat_id')
+            ->orderByDesc('total')
+            ->take(5)
+            ->get();
+
+        return view('admin.dashboard', compact('logs', 'stats', 'tren', 'alatTerpopuler'));
+    }
+    
     // Menampilkan Halaman Khusus Log Aktivitas (BARU)
     public function indexLogAktivitas(Request $request)
     {
@@ -164,7 +194,7 @@ class AdminController extends Controller
             ->with('success', 'Data alat berhasil dihapus.');
     }
 
-    public function indexUser(Request $request)
+        public function indexUser(Request $request)
     {
         $search = $request->input('search');
 
@@ -175,22 +205,31 @@ class AdminController extends Controller
                     ->orWhere('role', 'like', '%' . $search . '%')
                     ->orWhere('no_hp', 'like', '%' . $search . '%');
             });
-        })->get();
+        })
+            ->orderByRaw("role = 'admin' DESC")
+            ->orderBy('name')
+            ->get();
 
         return view('admin.user.index', compact('users', 'search'));
     }
-
+    
     public function createUser()
     {
         return view('admin.user.create');
     }
 
-    public function editUser($id)
+       public function editUser($id)
     {
         $user = User::findOrFail($id);
+
+        if ($user->is_super_admin && $user->id !== auth()->id()) {
+            return redirect()->route('admin.user.index')
+                ->with('error', 'Data admin utama tidak bisa diedit oleh admin lain.');
+        }
+
         return view('admin.user.edit', compact('user'));
     }
-
+    
     public function indexKategori(Request $request)
     {
         $search = $request->input('search');
@@ -436,7 +475,7 @@ class AdminController extends Controller
     public function indexPengembalian(Request $request)
     {
         $query = Peminjaman::with('user', 'detailPinjams.alat', 'pengembalian')
-            ->whereIn('status', ['selesai', 'telat']); // Hanya ambil yang sudah selesai / telat
+            ->whereIn('status', ['selesai', 'telat', 'dikembalikan']); // Hanya ambil yang sudah selesai / telat
 
         if ($request->has('search') && $request->search != '') {
             $search = $request->search;
@@ -462,8 +501,8 @@ class AdminController extends Controller
         $statusBuku = 'selesai';
 
         if ($sekarang->gt($tglRencana)) {
-            $selisihHari = $sekarang->diffInDays($tglRencana);
-            if ($selisihHari == 0) $selisihHari = 1; // Minimal terhitung 1 hari jika lewat jam
+            $selisihHari = (int) ceil($tglRencana->diffInDays($sekarang));
+            if ($selisihHari < 1) $selisihHari = 1;
             $dendaTelat = $selisihHari * 10000;
             $statusBuku = 'telat';
         }
@@ -495,6 +534,77 @@ class AdminController extends Controller
             DB::rollBack();
             return back()->with('error', $e->getMessage());
         }
+    }
+
+        public function laporanPengembalian(Request $request)
+    {
+        $dariTanggal = $request->input('dari_tanggal');
+        $sampaiTanggal = $request->input('sampai_tanggal');
+        $search = $request->input('search');
+
+        $query = Peminjaman::with('user', 'detailPinjams.alat', 'pengembalian.petugas')
+            ->whereIn('status', ['selesai', 'telat', 'dikembalikan']);
+
+        if ($dariTanggal && $sampaiTanggal) {
+            $query->whereHas('pengembalian', function ($q) use ($dariTanggal, $sampaiTanggal) {
+                $q->whereBetween('tgl_kembali', [$dariTanggal, $sampaiTanggal]);
+            });
+        }
+
+        if ($search) {
+            $query->whereHas('user', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%");
+            });
+        }
+
+        $peminjamans = $query->latest()->get();
+        $totalDenda = $peminjamans->sum(fn ($item) => optional($item->pengembalian)->denda ?? 0);
+
+        return view('admin.laporan.index', compact('peminjamans', 'totalDenda', 'dariTanggal', 'sampaiTanggal', 'search'));
+    }
+
+        public function destroyPengembalian($id)
+    {
+        $peminjaman = Peminjaman::with('detailPinjams', 'pengembalian')->findOrFail($id);
+        $namaPeminjam = optional($peminjaman->user)->name ?? '-';
+
+        DB::beginTransaction();
+        try {
+            optional($peminjaman->pengembalian)->delete();
+            $peminjaman->detailPinjams()->delete();
+            $peminjaman->delete();
+
+            LogAktivitas::create([
+                'user_id' => auth()->id(),
+                'aktivitas' => 'Menghapus riwayat pengembalian peminjaman #' . $id . ' (' . $namaPeminjam . ')',
+            ]);
+
+            DB::commit();
+            return redirect()->route('admin.pengembalian.index')->with('success', 'Riwayat pengembalian berhasil dihapus.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal menghapus: ' . $e->getMessage());
+        }
+    }
+
+    public function cetakLaporanPengembalian(Request $request)
+    {
+        $dariTanggal = $request->input('dari_tanggal');
+        $sampaiTanggal = $request->input('sampai_tanggal');
+
+        $query = Peminjaman::with('user', 'detailPinjams.alat', 'pengembalian.petugas')
+            ->whereIn('status', ['selesai', 'telat', 'dikembalikan']);
+
+        if ($dariTanggal && $sampaiTanggal) {
+            $query->whereHas('pengembalian', function ($q) use ($dariTanggal, $sampaiTanggal) {
+                $q->whereBetween('tgl_kembali', [$dariTanggal, $sampaiTanggal]);
+            });
+        }
+
+        $peminjamans = $query->latest()->get();
+        $totalDenda = $peminjamans->sum(fn ($item) => optional($item->pengembalian)->denda ?? 0);
+
+        return view('admin.laporan.cetak', compact('peminjamans', 'totalDenda', 'dariTanggal', 'sampaiTanggal'));
     }
 
     public function storeUser(Request $request)
@@ -579,10 +689,20 @@ class AdminController extends Controller
             ->with('success', 'Data user berhasil diperbarui.');
     }
 
-    public function destroyUser($id)
+        public function destroyUser($id)
     {
         $user = User::findOrFail($id);
-        
+
+        if ($user->id === auth()->id()) {
+            return redirect()->route('admin.user.index')
+                ->with('error', 'Anda tidak bisa menghapus akun Anda sendiri.');
+        }
+
+        if ($user->is_super_admin) {
+            return redirect()->route('admin.user.index')
+                ->with('error', 'Admin utama tidak bisa dihapus.');
+        }
+
         if ($user->foto && file_exists(public_path($user->foto))) {
             unlink(public_path($user->foto));
         }

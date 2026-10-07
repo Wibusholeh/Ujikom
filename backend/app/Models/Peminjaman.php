@@ -17,6 +17,7 @@ class Peminjaman extends Model
         'tgl_pinjam',
         'tgl_kembali_plan',
         'status',
+        'catatan_petugas',
     ];
 
     protected function casts(): array

@@ -65,6 +65,11 @@
                     <a href="{{ route('admin.log-aktivitas.index') }}" class="block px-4 py-2 rounded-lg transition {{ request()->routeIs('admin.log-aktivitas*') ? 'bg-gray-800 text-white font-medium shadow' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
                         Log Aktivitas
                     </a>
+
+                    <!-- Menu Laporan Pengembalian -->
+                    <a href="{{ route('admin.laporan.index') }}" class="block px-4 py-2 rounded-lg transition {{ request()->routeIs('admin.laporan*') ? 'bg-gray-800 text-white font-medium shadow' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                        Cetak Laporan
+                    </a>
                 @endif
 
                 <!-- MENU KHUSUS PETUGAS -->
@@ -75,10 +80,16 @@
                         Persetujuan Peminjaman
                     </a>
 
-                    <!-- Pemantauan Pengembalian (Opsional jika routenya ada) -->
-                    <a href="{{ route('petugas.peminjaman.index') }}" 
-                       class="block px-4 py-2 rounded-lg transition {{ request()->routeIs('petugas.pengembalian*') ? 'bg-gray-800 text-white font-medium shadow' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                                       <!-- Pemantauan Pengembalian (Opsional jika routenya ada) -->
+                   <a href="{{ route('petugas.pemantauan') }}" 
+                       class="block px-4 py-2 rounded-lg transition {{ request()->routeIs('petugas.pemantauan*') ? 'bg-gray-800 text-white font-medium shadow' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
                         Pemantauan Pengembalian
+                    </a>
+
+                    <!-- Cetak Laporan -->
+                    <a href="{{ route('petugas.laporan.pengembalian') }}" 
+                       class="block px-4 py-2 rounded-lg transition {{ request()->routeIs('petugas.laporan*') ? 'bg-gray-800 text-white font-medium shadow' : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+                        Cetak Laporan
                     </a>
                 @endif
 

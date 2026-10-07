@@ -64,10 +64,14 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // CRUD/Kelola Pengembalian Admin
     Route::get('/pengembalian', [AdminController::class, 'indexPengembalian'])->name('pengembalian.index');
     Route::delete('/pengembalian/{id}', [AdminController::class, 'destroyPengembalian'])->name('pengembalian.destroy');
-    Route::put('/pengembalian/{id}/proses', [AdminController::class, 'prosesPengembalian'])->name('pengembalian.proses'); // Diubah ke PUT agar sinkron dengan modal form
+    Route::put('/pengembalian/{id}/proses', [AdminController::class, 'prosesPengembalian'])->name('pengembalian.proses');
 
-    // Halaman Khusus Log Aktivitas Admin (BARU)
+    // Halaman Khusus Log Aktivitas Admin
     Route::get('/log-aktivitas', [AdminController::class, 'indexLogAktivitas'])->name('log-aktivitas.index');
+
+    // Laporan Pengembalian Admin
+    Route::get('/laporan-pengembalian', [AdminController::class, 'laporanPengembalian'])->name('laporan.index');
+    Route::get('/laporan-pengembalian/cetak', [AdminController::class, 'cetakLaporanPengembalian'])->name('laporan.cetak');
 });
 
 /*
@@ -77,17 +81,15 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 */
 
 Route::middleware(['auth', 'role:petugas,admin'])->prefix('petugas')->name('petugas.')->group(function () {
-    // Peminjaman & Persetujuan
     Route::get('/peminjaman', [PetugasController::class, 'index'])->name('peminjaman.index');
     Route::post('/peminjaman/{id}/setujui', [PetugasController::class, 'setujuiPeminjaman'])->name('peminjaman.setujui');
     Route::post('/peminjaman/{id}/tolak', [PetugasController::class, 'tolakPeminjaman'])->name('peminjaman.tolak');
     Route::post('/pengembalian/{peminjamanId}', [PetugasController::class, 'prosesPengembalian'])->name('pengembalian');
-    
-    // Pemantauan & Index Pengembalian
+    Route::post('/pengembalian/{id}/tolak', [PetugasController::class, 'tolakPengembalian'])->name('pengembalian.tolak');
+
     Route::get('/pemantauan-pengembalian', [PetugasController::class, 'pemantauanPengembalian'])->name('pemantauan');
     Route::get('/pengembalian', [PetugasController::class, 'pengembalianIndex'])->name('pengembalian.index');
 
-    // Route Laporan Pengembalian
     Route::get('/laporan-pengembalian', [PetugasController::class, 'laporanPengembalian'])->name('laporan.pengembalian');
     Route::get('/laporan-pengembalian/cetak', [PetugasController::class, 'cetakLaporanPengembalian'])->name('laporan.pengembalian.cetak');
 });
@@ -102,6 +104,9 @@ Route::middleware(['auth', 'role:peminjam'])->prefix('peminjam')->name('peminjam
     Route::get('/katalog', [PeminjamController::class, 'katalogAlat'])->name('katalog');
     Route::post('/peminjaman', [PeminjamController::class, 'ajukanPeminjaman'])->name('peminjaman.ajukan');
     Route::get('/riwayat', [PeminjamController::class, 'riwayatPeminjaman'])->name('riwayat');
+    
+    // Route Pengembalian Peminjam yang benar (tergabung dengan prefix & name group)
+    Route::post('/pengembalian/{id}/aju', [PeminjamController::class, 'ajukanPengembalian'])->name('pengembalian.aju');
 });
 
 /*
