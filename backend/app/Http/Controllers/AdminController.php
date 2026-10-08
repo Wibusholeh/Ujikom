@@ -175,10 +175,22 @@ class AdminController extends Controller
         return redirect()->route('admin.alat.index')->with('success', 'Data alat berhasil diperbarui.');
     }
 
-    public function destroyAlat($id)
+        public function destroyAlat($id)
     {
         $alat = Alat::findOrFail($id);
         $namaAlat = $alat->nama_alat;
+
+        $sedangDipinjam = DetailPinjam::where('alat_id', $alat->id)
+            ->whereHas('peminjaman', function ($query) {
+                $query->whereIn('status', ['diajukan', 'dipinjam', 'pengajuan_pengembalian', 'telat']);
+            })
+            ->exists();
+
+        if ($sedangDipinjam) {
+            return redirect()
+                ->route('admin.alat.index')
+                ->with('error', 'Alat "' . $namaAlat . '" tidak bisa dihapus karena masih ada peminjaman yang aktif/belum dikembalikan.');
+        }
 
         if ($alat->gambar && file_exists(public_path($alat->gambar))) {
             unlink(public_path($alat->gambar));

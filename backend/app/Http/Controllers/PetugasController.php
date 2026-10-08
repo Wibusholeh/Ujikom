@@ -168,14 +168,68 @@ class PetugasController extends Controller
         return view('petugas.peminjaman.laporan.pengembalian_cetak', compact('pengembalian', 'dariTanggal', 'sampaiTanggal', 'totalDenda'));
     }
 
-    public function prosesPengembalian(Request $request, $id)
+        public function prosesPengembalian(Request $request, $id)
     {
-        $peminjaman = Peminjaman::findOrFail($id);
-        
-        $peminjaman->status = 'selesai'; 
-        $peminjaman->save();
+        $request->validate([
+            'kondisi_kembali' => 'required|in:baik,rusak_ringan,rusak_sedang,rusak_berat',
+        ]);
 
-        return redirect()->back()->with('success', 'Pengembalian disetujui dan status telah selesai.');
+        $peminjaman = Peminjaman::with('detailPinjams.alat')->findOrFail($id);
+
+        $tglRencana = \Carbon\Carbon::parse($peminjaman->tgl_kembali_plan);
+        $sekarang = now();
+
+        // Denda keterlambatan
+        $dendaTelat = 0;
+        $statusBaru = 'selesai';
+        if ($sekarang->gt($tglRencana)) {
+            $hariTelat = (int) ceil($tglRencana->diffInDays($sekarang));
+            if ($hariTelat < 1) $hariTelat = 1;
+            $dendaTelat = $hariTelat * 10000;
+            $statusBaru = 'telat';
+        }
+
+        // Denda kerusakan
+        $dendaKerusakan = match ($request->kondisi_kembali) {
+            'rusak_ringan' => 20000,
+            'rusak_sedang' => 50000,
+            'rusak_berat'  => 100000,
+            default        => 0,
+        };
+
+        $totalDenda = $dendaTelat + $dendaKerusakan;
+
+        DB::beginTransaction();
+        try {
+            foreach ($peminjaman->detailPinjams as $detail) {
+                $detail->alat->increment('stok', $detail->jumlah);
+            }
+
+            $peminjaman->update(['status' => $statusBaru]);
+
+            Pengembalian::updateOrCreate(
+                ['peminjaman_id' => $peminjaman->id],
+                [
+                    'tgl_kembali'      => $sekarang->toDateString(),
+                    'kondisi_kembali'  => $request->kondisi_kembali,
+                    'denda'            => $totalDenda,
+                    'petugas_id'       => auth()->id(),
+                ]
+            );
+
+            LogAktivitas::create([
+                'user_id' => auth()->id(),
+                'aktivitas' => 'Menyetujui pengembalian peminjaman #' . $peminjaman->id
+                    . ' (' . optional($peminjaman->user)->name . '), kondisi: ' . $request->kondisi_kembali
+                    . ($totalDenda > 0 ? ', denda: Rp ' . number_format($totalDenda, 0, ',', '.') : ''),
+            ]);
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Pengembalian disetujui. Total denda: Rp ' . number_format($totalDenda, 0, ',', '.'));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
     }
 
         public function tolakPengembalian(Request $request, $id)
