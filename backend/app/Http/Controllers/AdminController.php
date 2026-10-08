@@ -359,7 +359,7 @@ class AdminController extends Controller
 
     public function storePeminjaman(Request $request)
     {
-        $request->validate([
+                $request->validate([
             'user_id' => 'required|exists:users,id',
             'tgl_pinjam' => 'required|date',
             'tgl_kembali_plan' => 'required|date|after_or_equal:tgl_pinjam',
@@ -367,6 +367,10 @@ class AdminController extends Controller
             'alat_id.*' => 'exists:alat,id',
             'jumlah' => 'required|array',
             'jumlah.*' => 'integer|min:1',
+        ], [
+            'tgl_kembali_plan.after_or_equal' => 'Rencana tanggal kembali tidak boleh lebih awal dari tanggal pinjam.',
+            'user_id.required' => 'Peminjam harus dipilih.',
+            'alat_id.required' => 'Pilih minimal satu alat.',
         ]);
 
         DB::beginTransaction();
@@ -628,8 +632,10 @@ class AdminController extends Controller
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6',
             'role' => 'required|in:admin,petugas,peminjam',
-            'no_hp' => 'nullable|string|max:20',
+            'no_hp' => ['nullable', 'regex:/^[0-9]{8,15}$/'],
             'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+         ], [
+            'no_hp.regex' => 'No. HP hanya boleh berisi angka (8 sampai 15 digit).',
         ]);
 
         $fotoPath = null;
@@ -662,18 +668,29 @@ class AdminController extends Controller
     {
         $user = User::findOrFail($id);
 
+        // Admin utama hanya boleh diedit oleh dirinya sendiri
+        if ($user->is_super_admin && $user->id !== auth()->id()) {
+            return redirect()->route('admin.user.index')
+                ->with('error', 'Data admin utama tidak bisa diedit oleh admin lain.');
+        }
+
+        // Role akun sendiri dikunci, role user lain boleh diubah
+        $isSelf = $user->id === auth()->id();
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $id,
-            'role' => 'required|in:admin,petugas,peminjam',
-            'no_hp' => 'nullable|string|max:20',
+            'role' => $isSelf ? 'nullable' : 'required|in:admin,petugas,peminjam',
+            'no_hp' => ['nullable', 'regex:/^[0-9]{8,15}$/'],
             'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+         ], [
+            'no_hp.regex' => 'No. HP hanya boleh berisi angka (8 sampai 15 digit).',
         ]);
 
         $data = [
             'name' => $request->name,
             'email' => $request->email,
-            'role' => $request->role,
+            'role' => $isSelf ? $user->role : $request->role,
             'no_hp' => $request->no_hp,
         ];
 

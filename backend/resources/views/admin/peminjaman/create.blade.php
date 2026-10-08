@@ -4,7 +4,21 @@
 @section('header-title', 'Form Tambah Transaksi Peminjaman')
 
 @section('content')
-<!-- Tambahkan CSS Select2 -->
+    @if($errors->any())
+        <div class="mb-4 bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg shadow-sm text-sm">
+            <ul class="list-disc list-inside">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="mb-4 bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg shadow-sm text-sm">
+            {{ session('error') }}
+        </div>
+    @endif
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <style>
     /* Sedikit penyesuaian CSS agar tampilan Select2 cocok dengan Tailwind */
