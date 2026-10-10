@@ -20,7 +20,7 @@
 
 <div class="bg-white shadow-md rounded-lg overflow-hidden p-6">
     <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-        <h2 class="text-lg font-semibold text-gray-800">Daftar Alat Sedang Dipinjam</h2>
+        <h2 class="text-lg font-semibold text-gray-800">Daftar Pengajuan Pengembalian</h2>
 
         <form action="{{ route('petugas.pemantauan') }}" method="GET" class="flex w-full md:w-auto">
             <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama peminjam..." class="border border-gray-300 rounded-l-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 w-full md:w-64">
@@ -85,7 +85,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada alat yang sedang dipinjam saat ini.</td>
+                        <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">Belum ada pengajuan pengembalian dari peminjam.</td>
                     </tr>
                 @endforelse
             </tbody>

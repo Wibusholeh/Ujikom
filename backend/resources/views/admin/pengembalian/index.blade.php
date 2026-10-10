@@ -8,11 +8,18 @@
 <div class="bg-white shadow-md rounded-lg overflow-hidden p-6">
     <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
         <h2 class="text-lg font-semibold text-gray-800">Riwayat Pengembalian Alat</h2>
-        
-        <form action="{{ route('admin.pengembalian.index') }}" method="GET" class="flex w-full md:w-auto">
-            <input type="text" name="search" value="{{ $search ?? '' }}" placeholder="Cari nama peminjam..." class="border border-gray-300 rounded-l-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 w-full md:w-64">
-            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-r-md text-sm transition">Cari</button>
-        </form>
+
+        <div class="flex items-center gap-3 w-full md:w-auto">
+            <form action="{{ route('admin.pengembalian.index') }}" method="GET" class="flex w-full md:w-auto">
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama peminjam..." class="border border-gray-300 rounded-l-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 w-full md:w-64">
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-r-md text-sm transition">Cari</button>
+            </form>
+
+            <a href="{{ route('admin.pengembalian.create') }}"
+               class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-1.5 rounded-md transition whitespace-nowrap">
+                + Tambah Pengembalian
+            </a>
+        </div>
     </div>
 
     @if(session('success'))
@@ -38,6 +45,7 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tgl Dikembalikan</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Denda</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diverifikasi Oleh</th>
                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                 </tr>
             </thead>
@@ -45,7 +53,10 @@
                 @if(isset($peminjamans) && count($peminjamans) > 0)
                     @php $no = $peminjamans->firstItem(); @endphp
                     @foreach($peminjamans as $item)
-                    @php $denda = optional($item->pengembalian)->denda ?? 0; @endphp
+                    @php
+                        $denda = optional($item->pengembalian)->denda ?? 0;
+                        $petugas = optional(optional($item->pengembalian)->petugas)->name;
+                    @endphp
                     <tr>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $no++ }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ optional($item->user)->name ?? '-' }}</td>
@@ -65,13 +76,20 @@
                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Selesai</span>
                             @endif
                         </td>
-                         <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
                             @if($denda > 0)
                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
                                     Rp {{ number_format($denda, 0, ',', '.') }}
                                 </span>
                             @else
                                 <span class="text-gray-500">-</span>
+                            @endif
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            @if($petugas)
+                                <span class="font-medium text-gray-800">{{ $petugas }}</span>
+                            @else
+                                <span class="text-gray-400">-</span>
                             @endif
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-center text-sm">
@@ -88,7 +106,7 @@
                     @endforeach
                 @else
                     <tr>
-                        <td colspan="8" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada data pengembalian.</td>
+                        <td colspan="9" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada data pengembalian.</td>
                     </tr>
                 @endif
             </tbody>

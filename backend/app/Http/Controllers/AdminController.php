@@ -492,7 +492,7 @@ class AdminController extends Controller
 
     public function indexPengembalian(Request $request)
     {
-        $query = Peminjaman::with('user', 'detailPinjams.alat', 'pengembalian')
+        $query = Peminjaman::with('user', 'detailPinjams.alat', 'pengembalian.petugas')
             ->whereIn('status', ['selesai', 'telat', 'dikembalikan']); // Hanya ambil yang sudah selesai / telat
 
         if ($request->has('search') && $request->search != '') {
@@ -602,6 +602,97 @@ class AdminController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Gagal menghapus: ' . $e->getMessage());
+        }
+    }
+
+        public function createPengembalian()
+    {
+        $peminjamans = Peminjaman::with('user', 'detailPinjams.alat')
+            ->whereIn('status', ['dipinjam', 'pengajuan_pengembalian'])
+            ->orderBy('tgl_kembali_plan')
+            ->get();
+
+        return view('admin.pengembalian.create', compact('peminjamans'));
+    }
+
+    public function storePengembalian(Request $request)
+    {
+        $request->validate([
+            'peminjaman_id'   => 'required|exists:peminjaman,id',
+            'tgl_kembali'     => 'required|date|before_or_equal:today',
+            'kondisi_kembali' => 'required|in:baik,rusak_ringan,rusak_sedang,rusak_berat',
+        ], [
+            'peminjaman_id.required'      => 'Peminjaman harus dipilih.',
+            'tgl_kembali.before_or_equal' => 'Tanggal dikembalikan tidak boleh lebih dari hari ini.',
+        ]);
+
+        $peminjaman = Peminjaman::with('detailPinjams.alat', 'user')->findOrFail($request->peminjaman_id);
+
+        if (!in_array($peminjaman->status, ['dipinjam', 'pengajuan_pengembalian'])) {
+            return back()->withInput()
+                ->with('error', 'Peminjaman ini tidak sedang dipinjam, jadi pengembaliannya tidak bisa dicatat.');
+        }
+
+        $tglKembali = \Carbon\Carbon::parse($request->tgl_kembali)->startOfDay();
+        $tglPinjam  = \Carbon\Carbon::parse($peminjaman->tgl_pinjam)->startOfDay();
+        $tglRencana = \Carbon\Carbon::parse($peminjaman->tgl_kembali_plan)->startOfDay();
+
+        if ($tglKembali->lt($tglPinjam)) {
+            return back()->withInput()
+                ->with('error', 'Tanggal dikembalikan tidak boleh lebih awal dari tanggal pinjam.');
+        }
+
+        // Denda keterlambatan Rp 10.000 per hari
+        $dendaTelat = 0;
+        $statusBaru = 'selesai';
+        if ($tglKembali->gt($tglRencana)) {
+            $hariTelat  = max(1, (int) ceil($tglRencana->diffInDays($tglKembali)));
+            $dendaTelat = $hariTelat * 10000;
+            $statusBaru = 'telat';
+        }
+
+        // Denda kerusakan
+        $dendaKerusakan = match ($request->kondisi_kembali) {
+            'rusak_ringan' => 20000,
+            'rusak_sedang' => 50000,
+            'rusak_berat'  => 100000,
+            default        => 0,
+        };
+
+        $totalDenda = $dendaTelat + $dendaKerusakan;
+
+        DB::beginTransaction();
+        try {
+            foreach ($peminjaman->detailPinjams as $detail) {
+                $detail->alat->increment('stok', $detail->jumlah);
+            }
+
+            $peminjaman->update(['status' => $statusBaru]);
+
+            \App\Models\Pengembalian::updateOrCreate(
+                ['peminjaman_id' => $peminjaman->id],
+                [
+                    'tgl_kembali'     => $tglKembali->toDateString(),
+                    'kondisi_kembali' => $request->kondisi_kembali,
+                    'denda'           => $totalDenda,
+                    'petugas_id'      => auth()->id(),
+                ]
+            );
+
+            LogAktivitas::create([
+                'user_id'   => auth()->id(),
+                'aktivitas' => 'Mencatat pengembalian manual peminjaman #' . $peminjaman->id
+                    . ' (' . optional($peminjaman->user)->name . '), kondisi: ' . $request->kondisi_kembali
+                    . ($totalDenda > 0 ? ', denda: Rp ' . number_format($totalDenda, 0, ',', '.') : ''),
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('admin.pengembalian.index')
+                ->with('success', 'Pengembalian berhasil dicatat. Total denda: Rp ' . number_format($totalDenda, 0, ',', '.'));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
 

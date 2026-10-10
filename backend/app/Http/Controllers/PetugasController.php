@@ -111,7 +111,7 @@ class PetugasController extends Controller
         $keyword = $request->input('search');
 
                 $peminjamans = Peminjaman::with(['user', 'detailPinjams.alat'])
-            ->whereIn('status', ['dipinjam', 'pengajuan_pengembalian'])
+            ->where('status', 'pengajuan_pengembalian')
             ->when($keyword, function ($query) use ($keyword) {
                 $query->whereHas('user', function ($q) use ($keyword) {
                     $q->where('name', 'like', "%{$keyword}%");
