@@ -21,6 +21,12 @@
             </div>
         @endif
 
+        @if(session('success'))
+            <div class="bg-green-100 text-green-700 p-3 rounded mb-4">
+                {{ session('success') }}
+            </div>
+        @endif
+
         <form action="{{ route('login') }}" method="POST">
             @csrf
 
@@ -65,6 +71,13 @@
             >
                 Login
             </button>
+
+            <p class="text-center text-sm text-gray-600 mt-4">
+                Belum punya akun peminjam?
+                <a href="{{ route('register') }}" class="text-blue-600 hover:underline font-medium">
+                    Daftar di sini
+                </a>
+            </p>
 
         </form>
 

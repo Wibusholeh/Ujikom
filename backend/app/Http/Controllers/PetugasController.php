@@ -110,7 +110,7 @@ class PetugasController extends Controller
     {
         $keyword = $request->input('search');
 
-                $peminjamans = Peminjaman::with(['user', 'detailPinjams.alat'])
+        $peminjamans = Peminjaman::with(['user', 'detailPinjams.alat'])
             ->where('status', 'pengajuan_pengembalian')
             ->when($keyword, function ($query) use ($keyword) {
                 $query->whereHas('user', function ($q) use ($keyword) {
@@ -168,10 +168,12 @@ class PetugasController extends Controller
         return view('petugas.peminjaman.laporan.pengembalian_cetak', compact('pengembalian', 'dariTanggal', 'sampaiTanggal', 'totalDenda'));
     }
 
-        public function prosesPengembalian(Request $request, $id)
+    // Memproses Pengembalian dengan Input Denda Manual dari Petugas
+    public function prosesPengembalian(Request $request, $id)
     {
         $request->validate([
             'kondisi_kembali' => 'required|in:baik,rusak_ringan,rusak_sedang,rusak_berat',
+            'denda'           => 'required|numeric|min:0',
         ]);
 
         $peminjaman = Peminjaman::with('detailPinjams.alat')->findOrFail($id);
@@ -179,25 +181,11 @@ class PetugasController extends Controller
         $tglRencana = \Carbon\Carbon::parse($peminjaman->tgl_kembali_plan);
         $sekarang = now();
 
-        // Denda keterlambatan
-        $dendaTelat = 0;
-        $statusBaru = 'selesai';
-        if ($sekarang->gt($tglRencana)) {
-            $hariTelat = (int) ceil($tglRencana->diffInDays($sekarang));
-            if ($hariTelat < 1) $hariTelat = 1;
-            $dendaTelat = $hariTelat * 10000;
-            $statusBaru = 'telat';
-        }
+        // Cek status waktu pengembalian
+        $statusBaru = $sekarang->gt($tglRencana) ? 'telat' : 'selesai';
 
-        // Denda kerusakan
-        $dendaKerusakan = match ($request->kondisi_kembali) {
-            'rusak_ringan' => 20000,
-            'rusak_sedang' => 50000,
-            'rusak_berat'  => 100000,
-            default        => 0,
-        };
-
-        $totalDenda = $dendaTelat + $dendaKerusakan;
+        // Mengambil nominal denda langsung dari input manual petugas
+        $totalDenda = (int) $request->input('denda', 0);
 
         DB::beginTransaction();
         try {
@@ -205,23 +193,27 @@ class PetugasController extends Controller
                 $detail->alat->increment('stok', $detail->jumlah);
             }
 
-            $peminjaman->update(['status' => $statusBaru]);
+            $peminjaman->update([
+                'status'          => $statusBaru,
+                'kondisi_kembali' => $request->kondisi_kembali,
+                'denda'           => $totalDenda,
+            ]);
 
             Pengembalian::updateOrCreate(
                 ['peminjaman_id' => $peminjaman->id],
                 [
-                    'tgl_kembali'      => $sekarang->toDateString(),
-                    'kondisi_kembali'  => $request->kondisi_kembali,
-                    'denda'            => $totalDenda,
-                    'petugas_id'       => auth()->id(),
+                    'tgl_kembali'     => $sekarang->toDateString(),
+                    'kondisi_kembali' => $request->kondisi_kembali,
+                    'denda'           => $totalDenda,
+                    'petugas_id'      => auth()->id(),
                 ]
             );
 
             LogAktivitas::create([
-                'user_id' => auth()->id(),
+                'user_id'   => auth()->id(),
                 'aktivitas' => 'Menyetujui pengembalian peminjaman #' . $peminjaman->id
                     . ' (' . optional($peminjaman->user)->name . '), kondisi: ' . $request->kondisi_kembali
-                    . ($totalDenda > 0 ? ', denda: Rp ' . number_format($totalDenda, 0, ',', '.') : ''),
+                    . ($totalDenda > 0 ? ', denda manual: Rp ' . number_format($totalDenda, 0, ',', '.') : ', tanpa denda'),
             ]);
 
             DB::commit();
@@ -232,7 +224,7 @@ class PetugasController extends Controller
         }
     }
 
-        public function tolakPengembalian(Request $request, $id)
+    public function tolakPengembalian(Request $request, $id)
     {
         $peminjaman = Peminjaman::findOrFail($id);
 
@@ -243,7 +235,7 @@ class PetugasController extends Controller
         $peminjaman->save();
 
         LogAktivitas::create([
-            'user_id' => auth()->id(),
+            'user_id'   => auth()->id(),
             'aktivitas' => 'Menolak pengembalian peminjaman #' . $peminjaman->id . ': ' . $catatan,
         ]);
 

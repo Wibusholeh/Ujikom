@@ -10,7 +10,7 @@ use App\Models\User;
 class AuthController extends Controller
 {
     // ==========================
-    // WEB LOGIN
+    // WEB LOGIN & REGISTER
     // ==========================
 
     // Menampilkan Form Login
@@ -19,6 +19,41 @@ class AuthController extends Controller
         return view('auth.login');
     }
 
+    // Menampilkan Form Registrasi Khusus Peminjam
+    public function showRegisterForm()
+    {
+        return view('auth.register');
+    }
+
+    // Memproses Registrasi Web Khusus Peminjam
+    public function registerWeb(Request $request)
+    {
+        $validated = $request->validate([
+            'name'     => ['required', 'string', 'max:255'],
+            'email'    => ['required', 'email', 'max:255', 'unique:users,email'],
+            'no_hp'    => ['nullable', 'string', 'max:20'],
+            'password' => ['required', 'min:8', 'confirmed'],
+        ], [
+            'email.unique'       => 'Email ini sudah terdaftar.',
+            'password.min'       => 'Password minimal harus 8 karakter.',
+            'password.confirmed' => 'Konfirmasi password tidak cocok.',
+        ]);
+
+        $user = User::create([
+            'name'     => $validated['name'],
+            'email'    => $validated['email'],
+            'no_hp'    => $validated['no_hp'] ?? null,
+            'password' => Hash::make($validated['password']),
+            'role'     => 'peminjam', // Dikunci khusus peminjam
+        ]);
+
+        // Otomatis login setelah berhasil registrasi
+        Auth::login($user);
+        $request->session()->regenerate();
+
+        return redirect()->route('peminjam.katalog')
+            ->with('success', 'Registrasi berhasil! Selamat datang, ' . $user->name . '.');
+    }
 
     // Memproses Login Web
     public function login(Request $request)
@@ -58,7 +93,6 @@ class AuthController extends Controller
             ->onlyInput('email');
     }
 
-
     // ==========================
     // WEB LOGOUT
     // ==========================
@@ -72,7 +106,6 @@ class AuthController extends Controller
 
         return redirect()->route('login');
     }
-
 
     // ==========================
     // REST API SANCTUM
@@ -88,7 +121,6 @@ class AuthController extends Controller
             'role'     => 'nullable|string',
         ]);
 
-
         $user = User::create([
             'name'     => $validated['name'],
             'email'    => $validated['email'],
@@ -96,13 +128,11 @@ class AuthController extends Controller
             'role'     => $validated['role'] ?? 'peminjam',
         ]);
 
-
         return response()->json([
             'message' => 'Registrasi berhasil',
-            'user' => $user
+            'user'    => $user
         ], 201);
     }
-
 
     // Login API Sanctum
     public function loginApi(Request $request)
@@ -112,35 +142,26 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-
         if (!Auth::attempt($credentials)) {
-
             return response()->json([
                 'message' => 'Email atau password salah'
             ], 401);
-
         }
 
-
         $user = Auth::user();
-
-
         $token = $user->createToken('api-token')->plainTextToken;
-
 
         return response()->json([
             'message' => 'Login berhasil',
-            'token' => $token,
-            'user' => $user
+            'token'   => $token,
+            'user'    => $user
         ]);
     }
-
 
     // Logout API Sanctum
     public function logoutApi(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
-
 
         return response()->json([
             'message' => 'Logout berhasil'

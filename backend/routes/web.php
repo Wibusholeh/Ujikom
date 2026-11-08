@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
@@ -16,6 +17,15 @@ use App\Http\Controllers\API\LogAktivitasController;
 Route::get('/', function () {
     return redirect()->route('login');
 });
+
+Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+Route::post('/login', [AuthController::class, 'login']);
+
+// Tambahkan 2 baris route registrasi ini:
+Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
+Route::post('/register', [AuthController::class, 'registerWeb'])->name('register.post');
+
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
@@ -120,4 +130,9 @@ Route::middleware(['auth', 'role:peminjam'])->prefix('peminjam')->name('peminjam
 
 Route::middleware(['auth:sanctum', 'role:admin'])->prefix('api')->group(function () {
     Route::get('/log-aktivitas', [LogAktivitasController::class, 'index']);
+});
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
 });

@@ -11,19 +11,19 @@ class PeminjamanSeeder extends Seeder
     {
         $peminjaman = [
             [
-                'user_id' => 3, // Rian (Peminjam)
+                'user_id' => 3,
                 'tgl_pinjam' => '2026-06-01',
                 'tgl_kembali_plan' => '2026-06-04',
                 'status' => 'dikembalikan',
             ],
             [
-                'user_id' => 4, // Siti (Peminjam)
+                'user_id' => 3, // Diubah dari 4 ke 3
                 'tgl_pinjam' => '2026-06-02',
                 'tgl_kembali_plan' => '2026-06-05',
                 'status' => 'dikembalikan',
             ],
             [
-                'user_id' => 5, // Eka (Peminjam)
+                'user_id' => 3,
                 'tgl_pinjam' => '2026-06-03',
                 'tgl_kembali_plan' => '2026-06-06',
                 'status' => 'telat',
@@ -35,7 +35,7 @@ class PeminjamanSeeder extends Seeder
                 'status' => 'dipinjam',
             ],
             [
-                'user_id' => 4,
+                'user_id' => 3, // Diubah dari 4 ke 3
                 'tgl_pinjam' => '2026-06-09',
                 'tgl_kembali_plan' => '2026-06-12',
                 'status' => 'diajukan',

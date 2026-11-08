@@ -64,7 +64,7 @@
                                 <span class="px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs font-semibold">Tepat Waktu</span>
                             @endif
                         </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                             <div class="flex justify-center gap-2">
                                 <button type="button"
                                         onclick="bukaModalSetujui('{{ route('petugas.pengembalian', $item->id) }}', '{{ optional($item->user)->name }}')"
@@ -98,7 +98,7 @@
         @endif
     </div>
 
-        <!-- Modal Kondisi Barang -->
+    <!-- Modal Kondisi Barang & Input Denda Manual -->
     <div id="modalSetujui" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
         <div class="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
             <h3 class="text-lg font-bold text-gray-800 mb-1">Setujui Pengembalian</h3>
@@ -106,13 +106,23 @@
 
             <form id="formSetujui" method="POST">
                 @csrf
-                <label class="block text-sm font-medium text-gray-700 mb-1">Kondisi Barang Saat Dikembalikan</label>
-                <select name="kondisi_kembali" required class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                    <option value="baik">Baik</option>
-                    <option value="rusak_ringan">Rusak Ringan (denda Rp 20.000)</option>
-                    <option value="rusak_sedang">Rusak Sedang (denda Rp 50.000)</option>
-                    <option value="rusak_berat">Rusak Berat (denda Rp 100.000)</option>
-                </select>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Kondisi Barang Saat Dikembalikan</label>
+                    <select name="kondisi_kembali" required class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="baik">Baik</option>
+                        <option value="rusak_ringan">Rusak Ringan</option>
+                        <option value="rusak_sedang">Rusak Sedang</option>
+                        <option value="rusak_berat">Rusak Berat</option>
+                    </select>
+                </div>
+
+                <div class="mb-5">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nominal Denda (Rp)</label>
+                    <input type="number" name="denda" id="inputDendaModal" value="0" min="0" step="1000" required
+                           class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                           placeholder="Masukkan nominal denda (0 jika tidak ada)">
+                    <p class="text-xs text-gray-400 mt-1">Isi 0 jika tidak ada denda keterlambatan/kerusakan.</p>
+                </div>
 
                 <div class="flex justify-end gap-2">
                     <button type="button" onclick="tutupModalSetujui()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md text-sm transition">
@@ -130,6 +140,7 @@
         function bukaModalSetujui(url, namaPeminjam) {
             document.getElementById('formSetujui').action = url;
             document.getElementById('namaPeminjamModal').textContent = namaPeminjam;
+            document.getElementById('inputDendaModal').value = 0;
             document.getElementById('modalSetujui').classList.remove('hidden');
             document.getElementById('modalSetujui').classList.add('flex');
         }
