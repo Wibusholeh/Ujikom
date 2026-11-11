@@ -21,14 +21,9 @@ Route::get('/', function () {
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 
-// Tambahkan 2 baris route registrasi ini:
 Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
 Route::post('/register', [AuthController::class, 'registerWeb'])->name('register.post');
 
-Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-
-Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 /*
@@ -73,11 +68,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
     // CRUD/Kelola Pengembalian Admin
     Route::get('/pengembalian', [AdminController::class, 'indexPengembalian'])->name('pengembalian.index');
-    Route::delete('/pengembalian/{id}', [AdminController::class, 'destroyPengembalian'])->name('pengembalian.destroy');
-    Route::put('/pengembalian/{id}/proses', [AdminController::class, 'prosesPengembalian'])->name('pengembalian.proses');
-        Route::get('/pengembalian', [AdminController::class, 'indexPengembalian'])->name('pengembalian.index');
     Route::get('/pengembalian/create', [AdminController::class, 'createPengembalian'])->name('pengembalian.create');
     Route::post('/pengembalian', [AdminController::class, 'storePengembalian'])->name('pengembalian.store');
+    Route::put('/pengembalian/{id}/proses', [AdminController::class, 'prosesPengembalian'])->name('pengembalian.proses');
+    Route::delete('/pengembalian/{id}', [AdminController::class, 'destroyPengembalian'])->name('pengembalian.destroy');
 
     // Halaman Khusus Log Aktivitas Admin
     Route::get('/log-aktivitas', [AdminController::class, 'indexLogAktivitas'])->name('log-aktivitas.index');
@@ -117,9 +111,18 @@ Route::middleware(['auth', 'role:peminjam'])->prefix('peminjam')->name('peminjam
     Route::get('/katalog', [PeminjamController::class, 'katalogAlat'])->name('katalog');
     Route::post('/peminjaman', [PeminjamController::class, 'ajukanPeminjaman'])->name('peminjaman.ajukan');
     Route::get('/riwayat', [PeminjamController::class, 'riwayatPeminjaman'])->name('riwayat');
-    
-    // Route Pengembalian Peminjam yang benar (tergabung dengan prefix & name group)
     Route::post('/pengembalian/{id}/aju', [PeminjamController::class, 'ajukanPengembalian'])->name('pengembalian.aju');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Profil Pengguna (Admin, Petugas, Peminjam)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
 });
 
 /*
@@ -130,9 +133,4 @@ Route::middleware(['auth', 'role:peminjam'])->prefix('peminjam')->name('peminjam
 
 Route::middleware(['auth:sanctum', 'role:admin'])->prefix('api')->group(function () {
     Route::get('/log-aktivitas', [LogAktivitasController::class, 'index']);
-});
-
-Route::middleware(['auth'])->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
 });

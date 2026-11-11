@@ -61,9 +61,19 @@
             padding: 10px 12px;
             border-bottom: 1px solid #f1f5f9;
             color: #374151;
+            vertical-align: top;
         }
         tbody tr:last-child td { border-bottom: none; }
         tbody tr:nth-child(even) { background: #fafafa; }
+
+        .alat-list {
+            margin: 0;
+            padding-left: 16px;
+            font-size: 12px;
+        }
+        .alat-list li {
+            margin-bottom: 2px;
+        }
 
         .text-right { text-align: right; }
         .muted { color: #9ca3af; }
@@ -125,6 +135,9 @@
         <h1>Laporan Pengembalian Alat</h1>
         <p>
             Periode: {{ $dariTanggal ?? 'Semua' }} s/d {{ $sampaiTanggal ?? 'Semua' }}
+            @if(!empty($namaAlat))
+                &nbsp;&middot;&nbsp; Filter Barang: <strong>{{ $namaAlat }}</strong>
+            @endif
             &nbsp;&middot;&nbsp; Dicetak {{ now()->format('d-m-Y H:i') }}
         </p>
     </header>
@@ -134,6 +147,7 @@
             <tr>
                 <th>No</th>
                 <th>Peminjam</th>
+                <th>Detail Alat Dipinjam</th>
                 <th>Rencana Kembali</th>
                 <th>Tgl Dikembalikan</th>
                 <th>Petugas</th>
@@ -145,6 +159,20 @@
                 <tr>
                     <td>{{ $loop->iteration }}</td>
                     <td>{{ optional(optional($item->peminjaman)->user)->name ?? '-' }}</td>
+                    <td>
+                        @if(optional($item->peminjaman)->detailPinjams && $item->peminjaman->detailPinjams->count())
+                            <ul class="alat-list">
+                                @foreach($item->peminjaman->detailPinjams as $detail)
+                                    <li>
+                                        <strong>{{ optional($detail->alat)->nama_alat ?? 'Alat Dihapus' }}</strong>
+                                        <span class="muted">({{ $detail->jumlah }})</span>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @else
+                            <span class="muted">-</span>
+                        @endif
+                    </td>
                     <td>{{ optional($item->peminjaman)->tgl_kembali_plan ?? '-' }}</td>
                     <td class="{{ $item->tgl_kembali ? '' : 'muted' }}">
                         {{ $item->tgl_kembali ?? '-' }}
@@ -156,13 +184,13 @@
                         @if($item->denda > 0)
                             <span class="badge badge-denda">Rp {{ number_format($item->denda, 0, ',', '.') }}</span>
                         @else
-                            <span class="badge badge-tepat">Tepat waktu</span>
+                            <span class="badge badge-tepat">Tidak Ada Denda</span>
                         @endif
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" class="muted" style="text-align:center; padding:24px;">Tidak ada data untuk periode ini.</td>
+                    <td colspan="7" class="muted" style="text-align:center; padding:24px;">Tidak ada data untuk filter ini.</td>
                 </tr>
             @endforelse
         </tbody>

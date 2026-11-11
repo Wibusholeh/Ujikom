@@ -109,7 +109,7 @@
                             No. HP
                         </th>
 
-                        <th class="py-3 px-4 border-b w-48">
+                        <th class="py-3 px-4 border-b w-56">
                             Aksi
                         </th>
 
@@ -119,8 +119,14 @@
                 <tbody class="text-gray-700 text-sm">
 
                     @forelse($users as $index => $user)
+                        @php
+                            $isSuperAdmin = (bool) ($user->is_super_admin || $user->email === 'admin@gmail.com' || $user->id === 1);
+                            $isSelf = $user->id === auth()->id();
+                            $bolehEdit = !$isSuperAdmin || $isSelf;
+                            $bolehHapus = !$isSelf && !$isSuperAdmin;
+                        @endphp
 
-                        <tr class="hover:bg-gray-50 transition">
+                        <tr class="hover:bg-gray-50 transition {{ $isSuperAdmin ? 'bg-amber-50/30' : '' }}">
 
                             <td class="py-3 px-4 border-b text-center">
                                 {{ method_exists($users, 'firstItem') ? $users->firstItem() + $index : $index + 1 }}
@@ -129,7 +135,7 @@
                             {{-- Kolom Foto Profil --}}
                             <td class="py-3 px-4 border-b text-center">
                                 @if($user->foto && file_exists(public_path($user->foto)))
-                                    <img src="{{ asset($user->foto) }}" alt="Foto" class="w-10 h-10 rounded-full object-cover mx-auto shadow-sm">
+                                    <img src="{{ asset(implode('/', array_map('rawurlencode', explode('/', $user->foto)))) }}" alt="Foto" class="w-10 h-10 rounded-full object-cover mx-auto shadow-sm">
                                 @else
                                     <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs mx-auto shadow-sm">
                                         {{ strtoupper(substr($user->name, 0, 2)) }}
@@ -138,7 +144,12 @@
                             </td>
 
                             <td class="py-3 px-4 border-b font-medium text-gray-900">
-                                {{ $user->name }}
+                                <div class="flex items-center gap-2">
+                                    <span>{{ $user->name }}</span>
+                                    @if($isSelf)
+                                        <span class="text-[11px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-semibold">Anda</span>
+                                    @endif
+                                </div>
                             </td>
 
                             <td class="py-3 px-4 border-b">
@@ -147,24 +158,22 @@
 
                             <td class="py-3 px-4 border-b">
 
-                                @if($user->role === 'admin')
-
+                                @if($isSuperAdmin)
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                                        👑 Super Admin
+                                    </span>
+                                @elseif($user->role === 'admin')
                                     <span class="inline-flex px-2.5 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-700">
                                         Admin
                                     </span>
-
                                 @elseif($user->role === 'petugas')
-
                                     <span class="inline-flex px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700">
                                         Petugas
                                     </span>
-
                                 @else
-
                                     <span class="inline-flex px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-700">
                                         {{ ucfirst($user->role) }}
                                     </span>
-
                                 @endif
 
                             </td>
@@ -173,19 +182,14 @@
                                 {{ $user->no_hp ?? '-' }}
                             </td>
 
-                                                        <td class="py-3 px-4 border-b">
-
-                                @php
-                                    $isSelf = $user->id === auth()->id();
-                                    $bolehEdit = !$user->is_super_admin || $isSelf;
-                                    $bolehHapus = !$isSelf && !$user->is_super_admin;
-                                @endphp
+                            <td class="py-3 px-4 border-b">
 
                                 <div class="flex items-center space-x-2">
 
-                                    @if($user->is_super_admin)
-                                        <span class="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                            👑 Admin Utama
+                                    {{-- Jika Super Admin dilihat oleh Admin lain --}}
+                                    @if($isSuperAdmin && !$isSelf)
+                                        <span class="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded bg-gray-100 text-gray-500 border border-gray-200">
+                                            🔒 Terkunci (Super Admin)
                                         </span>
                                     @endif
 

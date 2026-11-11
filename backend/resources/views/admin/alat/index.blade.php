@@ -10,6 +10,22 @@
         </div>
     @endif
 
+    {{-- Notifikasi Sukses --}}
+    @if(session('success'))
+        <div class="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-lg shadow-sm text-sm flex items-center gap-2">
+            <span>✅</span>
+            <span>{{ session('success') }}</span>
+        </div>
+    @endif
+
+    {{-- Notifikasi Error --}}
+    @if(session('error'))
+        <div class="mb-4 bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg shadow-sm text-sm flex items-center gap-2">
+            <span>⚠️</span>
+            <span>{{ session('error') }}</span>
+        </div>
+    @endif
+
     <div class="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
         <div class="p-5 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row justify-between items-center gap-4">
             <h3 class="text-lg font-bold text-gray-800">Daftar Alat Laboratorium</h3>

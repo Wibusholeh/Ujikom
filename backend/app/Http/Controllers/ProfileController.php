@@ -13,7 +13,7 @@ class ProfileController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['admin', 'petugas'])) {
+        if (!in_array($user->role, ['admin', 'petugas', 'peminjam'])) {
             abort(403, 'Akses ditolak.');
         }
 
@@ -24,7 +24,7 @@ class ProfileController extends Controller
     {
         $user = Auth::user();
 
-        if (!in_array($user->role, ['admin', 'petugas'])) {
+        if (!in_array($user->role, ['admin', 'petugas', 'peminjam'])) {
             abort(403, 'Akses ditolak.');
         }
 

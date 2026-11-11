@@ -9,7 +9,7 @@
 <body class="bg-gray-50 min-h-screen">
 
     <!-- Navbar -->
-        @php
+    @php
         $navUser = auth()->user();
         $navFoto = $navUser?->foto;
         $navPunyaFoto = $navFoto && file_exists(public_path($navFoto));
@@ -18,7 +18,7 @@
         <div class="flex items-center gap-3">
             <span class="font-semibold text-lg">Panel Peminjam</span>
             <span class="hidden sm:inline text-white/30">|</span>
-            <div class="hidden sm:flex items-center gap-2">
+            <a href="{{ route('profile.edit') }}" class="hidden sm:flex items-center gap-2 hover:bg-white/10 px-2.5 py-1 rounded-full transition" title="Edit Profil Saya">
                 @if($navPunyaFoto)
                     <img src="{{ asset(implode('/', array_map('rawurlencode', explode('/', $navFoto)))) }}"
                          alt="Foto {{ $navUser->name }}"
@@ -28,12 +28,15 @@
                         {{ strtoupper(substr($navUser->name ?? 'U', 0, 1)) }}
                     </div>
                 @endif
-                <span class="text-sm text-white/80">Halo, {{ $navUser->name }}</span>
-            </div>
+                <span class="text-sm text-white/90 hover:text-white">Halo, {{ $navUser->name }}</span>
+            </a>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-4">
             <a href="{{ route('peminjam.riwayat') }}" class="text-sm text-white/90 hover:text-white transition">
                 Riwayat Pinjam
+            </a>
+            <a href="{{ route('profile.edit') }}" class="text-sm text-white/90 hover:text-white transition">
+                Profil Saya
             </a>
             <form action="{{ route('logout') }}" method="POST">
                 @csrf
